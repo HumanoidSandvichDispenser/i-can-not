@@ -31,26 +31,32 @@ def consume_token(jwt_token, audience):
     except jwt.exceptions.InvalidTokenError:
         return None
 
-@app.post("/verify-token/<string:user_key>")
-def verify_token(user_key):
+@app.post("/authenticate/<string:user_key>")
+def authenticate(user_key):
     request_json = request.json
     if request_json and "token" in request_json:
-        if consume_token(request_json["token"], user_key):
-            return make_response()
+        token = consume_token(request_json["token"], user_key)
+        if token:
+            return make_response(
+                {
+                    "message": "MSG_TOKEN_VERIFIED"
+                },
+                200,
+            )
         else:
             return make_response(
                 {
-                    "message": "Invalid token"
+                    "message": "MSG_ERR_TOKEN_INVALID"
                 },
                 401,
-                { "WWW-Authenticate": "Bearer" }
+                { "WWW-Authenticate": "Bearer" },
             )
     return make_response(
         {
-            "message": "Token not provided"
+            "message": "MSG_ERR_TOKEN_NOT_FOUND"
         },
         401,
-        { "WWW-Authenticate": "Bearer" }
+        { "WWW-Authenticate": "Bearer" },
     )
 
 @app.route("/verify-user/<string:user_key>")
@@ -78,6 +84,7 @@ def generate_verification(user_key):
     print("Generating token for", username)
     jwt_body = {
         "sub": "ICN_JWT",
+        "type": "TOKENTYPE_VERIFICATION",
         "iss": "i-can-not",
         "aud": user_key,
         "username": username,
